@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 
     'apps.account',
+    'apps.bookings',
+    'apps.stadiums',
 
 ]
 
