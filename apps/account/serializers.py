@@ -14,7 +14,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True, validators=[validate_password],
                                       help_text='Password must meet criteria.')
     password2 = serializers.CharField(write_only=True)
-    role = serializers.CharField(write_only=True, required=False, default='user')
 
     def validate_phone(self, value):
         if User.objects.filter(phone=value).exists():
@@ -31,18 +30,19 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['name', 'phone', 'password1', 'password2', 'role']
+        fields = ['name', 'phone', 'password1', 'password2']
+        extra_kwargs = {
+            'name': {'required': True},
+        }
 
     def create(self, validated_data):
-        role = validated_data.pop('role', 'user')  # Default role 'user'
         user = User.objects.create_user(
             name=validated_data['name'],
             phone=validated_data['phone'],
             password=validated_data['password1']
         )
         user.is_active = True
-        user.save()
-        user.role = role  # Assign the role after user is created
+        user.role = 'user'  # Default role beriladi
         user.save()
         return user
 
@@ -61,7 +61,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-        'id', 'name', 'phone', 'is_active', 'is_superuser', 'is_staff', 'role', 'modified_date', 'created_date')
+            'id', 'name', 'phone', 'is_active', 'is_superuser', 'is_staff', 'role', 'modified_date', 'created_date')
 
 
 class SuperUserCreateSerializer(serializers.ModelSerializer):
