@@ -6,7 +6,7 @@ class StadiumImageInline(admin.TabularInline):
     model = StadiumImage
     extra = 1
     fields = ('image',)
-    readonly_fields = ('image',)
+    # readonly_fields = ('image',)
 
 # Stadion joylashuvini inline tarzda ko‘rsatish uchun
 class StadiumLocationInline(admin.StackedInline):
@@ -17,24 +17,51 @@ class StadiumLocationInline(admin.StackedInline):
 # Stadion admin
 @admin.register(Stadium)
 class StadiumAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'owner', 'manager', 'views', 'created_date', 'average_rating')
+    list_display = (
+        'name',
+        'price',
+        'owner',
+        'manager',
+        'views',  # Ko‘rishlar faqat ko‘rinadi, tahrirlanmaydi
+        'average_rating',
+        'likes_count',
+        'wishlist_count',
+        'bookings_count',
+        'images_count',
+        'created_date'
+    )
     list_filter = ('owner', 'manager', 'created_date')
     search_fields = ('name', 'description')
     inlines = [StadiumLocationInline, StadiumImageInline]
-    list_editable = ('price',)
+    list_editable = ('price',)  # Faqat narxni tahrirlash mumkin
+    readonly_fields = ('views',)
     ordering = ('-created_date',)
 
+    # O‘rtacha reyting
     def average_rating(self, obj):
         return obj.average_rating
     average_rating.short_description = "O‘rtacha reyting"
 
-# Agar alohida ro‘yxatdan o‘tkazmoqchi bo‘lsangiz (ixtiyoriy)
-@admin.register(StadiumLocation)
-class StadiumLocationAdmin(admin.ModelAdmin):
-    list_display = ('stadium', 'address', 'latitude', 'longitude')
-    search_fields = ('stadium__name', 'address')
+    # Yoqtirishlar soni
+    def likes_count(self, obj):
+        from apps.bookings.models import Like
+        return Like.objects.filter(stadium=obj).count()
+    likes_count.short_description = "Yoqtirishlar soni"
 
-@admin.register(StadiumImage)
-class StadiumImageAdmin(admin.ModelAdmin):
-    list_display = ('stadium', 'image',)
-    search_fields = ('stadium__name',)
+    # Istaklar ro‘yxati soni
+    def wishlist_count(self, obj):
+        from apps.bookings.models import Wishlist
+        return Wishlist.objects.filter(stadium=obj).count()
+    wishlist_count.short_description = "Istaklar soni"
+
+    # Bronlar soni
+    def bookings_count(self, obj):
+        from apps.bookings.models import Booking
+        return Booking.objects.filter(stadium=obj).count()
+    bookings_count.short_description = "Bronlar soni"
+
+    # Rasmlar soni
+    def images_count(self, obj):
+        return obj.images.count()
+    images_count.short_description = "Rasmlar soni"
+

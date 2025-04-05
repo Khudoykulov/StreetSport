@@ -12,6 +12,12 @@ class IsAdminUser(BasePermission):
 class IsAdminOrOwner(BasePermission):
     """Admin va Owner qo‘shishi mumkin"""
 
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_authenticated and (
+                request.user.is_staff or (request.user.role == 'owner' and obj.owner == request.user))
+
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ['admin', 'owner']
 

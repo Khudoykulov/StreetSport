@@ -2,7 +2,7 @@ from django.db import models
 from apps.account.models import User
 from apps.stadiums.models import Stadium
 
-# Bron qilish
+
 class Booking(models.Model):
     stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='bookings', verbose_name="Stadion")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings', verbose_name="Foydalanuvchi")
@@ -19,7 +19,7 @@ class Booking(models.Model):
     class Meta:
         unique_together = ('stadium', 'booking_date', 'start_hour')
 
-# Reyting
+
 class Rating(models.Model):
     stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='ratings', verbose_name="Stadion")
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
@@ -28,7 +28,7 @@ class Rating(models.Model):
     def __str__(self):
         return f"{self.stadium.name} - {self.rank}"
 
-# Yoqtirish
+
 class Like(models.Model):
     stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='likes', verbose_name="Stadion")
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
@@ -36,7 +36,7 @@ class Like(models.Model):
     def __str__(self):
         return f"{self.user} liked {self.stadium.name}"
 
-# Istaklar ro‘yxati
+
 class Wishlist(models.Model):
     stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='wishlists', verbose_name="Stadion")
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
