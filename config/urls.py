@@ -32,6 +32,7 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
     path('account/', include('apps.account.urls')),
+    path('stadium/', include('apps.stadiums.urls')),
 ]
 
 if settings.DEBUG:

@@ -82,7 +82,7 @@ class SuperUserCreateSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'name', 'phone', ]
+        fields = ['id', 'name', 'phone',]
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
