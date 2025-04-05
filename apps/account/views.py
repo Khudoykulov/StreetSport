@@ -21,17 +21,6 @@ from apps.account.serializers import (
 )
 
 
-# Role-based Permission Classes
-class IsAdmin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'admin'
-
-
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return obj == request.user or request.user.is_superuser
-
-
 class UserRegisterView(generics.GenericAPIView):
     serializer_class = UserRegisterSerializer
     queryset = User.objects.all()
@@ -80,7 +69,7 @@ class UserProfileRUDView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class SuperUserCreateView(APIView):
-    permission_classes = [IsAdmin]  # Only admin users can create superusers
+    permission_classes = [IsAdminUser]  # Only admin users can create superusers
     serializer_class = SuperUserCreateSerializer
 
     def post(self, request, *args, **kwargs):
