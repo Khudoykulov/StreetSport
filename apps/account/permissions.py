@@ -36,3 +36,42 @@ class IsReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return obj.id == request.user.id
+
+
+class CustomBookingPermission(BasePermission):
+    """
+    Maxsus ruxsat sinfi:
+    - GET: Hamma uchun ochiq
+    - CREATE: Faqat oddiy user (is_staff=False, is_superuser=False)
+    - DELETE/PUT/PATCH: Faqat 'Manager' guruhi
+    """
+
+    def has_permission(self, request, view):
+        # GET va boshqa xavfsiz metodlar uchun hamma uchun ruxsat
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Autentifikatsiya qilinmagan foydalanuvchilar uchun ruxsat yo‘q
+        if not request.user.is_authenticated:
+            return False
+
+        # CREATE uchun: Faqat oddiy user
+        if view.action == 'create':
+            return not request.user.is_staff and not request.user.is_superuser
+
+        # DELETE, PUT, PATCH uchun: Faqat 'Manager' guruhi
+        if view.action in ['destroy', 'update', 'partial_update']:
+            return request.user.groups.filter(name='Manager').exists()
+
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        # GET va boshqa xavfsiz metodlar uchun hamma uchun ruxsat
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # DELETE, PUT, PATCH uchun: Faqat 'Manager' guruhi
+        if view.action in ['destroy', 'update', 'partial_update']:
+            return request.user.groups.filter(name='Manager').exists()
+
+        return False

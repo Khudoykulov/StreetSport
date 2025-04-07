@@ -1,12 +1,13 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, permissions, viewsets
 from rest_framework.generics import UpdateAPIView
-from .permissions import IsAdminUser, IsAdminOrOwner, IsReadOnly, IsAdminOrReadOnly
+from .permissions import IsAdminUser, IsAdminOrOwner, IsAdminOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import SuperUserCreateSerializer, OwnerListSerializer, ManagerListSerializer, ManagerCreateSerializer,UserRoleUpdateSerializer
+from .serializers import SuperUserCreateSerializer, OwnerListSerializer, ManagerListSerializer, ManagerCreateSerializer, \
+    UserRoleUpdateSerializer, ResetPasswordSerializer, ChangePasswordSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -125,3 +126,32 @@ class UserRoleUpdateView(UpdateAPIView):
             instance.save()
             return Response({'success': True, 'detail': f"User role updated to {role}."}, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid role provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        data = {
+            'success': True,
+            'detail': 'Your password has been changed.',
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        data = {
+            'success': True,
+            'detail': 'Your password has been reset.',
+        }
+        return Response(data, status=status.HTTP_200_OK)

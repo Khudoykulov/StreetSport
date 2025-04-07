@@ -7,7 +7,9 @@ from .views import (
     SuperUserCreateView,
     OwnerViewSet,
     ManagerViewSet,
-    UserRoleUpdateView
+    UserRoleUpdateView,
+    ResetPasswordView,
+    ChangePasswordView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -23,4 +25,6 @@ urlpatterns = [
     path('create-superuser/', SuperUserCreateView.as_view(), name='create-superuser'),
     path('profile/<int:pk>/', UserProfileRUDView.as_view(), name='user-profile-rud'),
     path('update-role/<int:pk>/', UserRoleUpdateView.as_view(), name='update-user-role'),
+    path('password/change/', ChangePasswordView.as_view(), name='password-change'),
+    path('password/reset/', ResetPasswordView.as_view(), name='password-reset'),
 ]

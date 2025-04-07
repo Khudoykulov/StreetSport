@@ -28,11 +28,12 @@ urlpatterns = [
     # Optional UI:
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path('', TemplateView.as_view(template_name="home.html"), name='home'),  # Bosh sahifa
+    # path('', TemplateView.as_view(template_name="home.html"), name='home'),  # Bosh sahifa
 
     path('admin/', admin.site.urls),
     path('account/', include('apps.account.urls')),
     path('stadium/', include('apps.stadiums.urls')),
+    path('booking/', include('apps.bookings.urls')),
 ]
 
 if settings.DEBUG:

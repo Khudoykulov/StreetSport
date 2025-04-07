@@ -162,3 +162,49 @@ class UserRoleUpdateSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError("Noto‘g‘ri role kiritildi.")
         return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+        if self.context['request'].user.check_password(password):
+            raise ValidationError('Current must not equal to new password')
+        if password == password2:
+            return attrs
+        raise ValidationError('Passwords do not match')
+
+    def create(self, validated_data):
+        password = validated_data.get('password')
+        user = self.context['request'].user
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, attrs):
+        old_password = attrs.get('old_password')
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+        if self.context['request'].user.check_password(old_password):
+            if old_password == password:
+                raise ValidationError('Current must not equal to new password')
+            if password == password2:
+                return attrs
+            raise ValidationError("Passwords do not match")
+        raise ValidationError('Old password does not match')
+
+    def create(self, validated_data):
+        password = validated_data.get('password')
+        user = self.context['request'].user
+        user.set_password(password)
+        user.save()
+        return user
