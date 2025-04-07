@@ -182,8 +182,8 @@ REST_FRAMEWORK = {
 
 # drf-spectacular
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Wholesale_app API',
-    'DESCRIPTION': 'Learning wholesale_app system',
+    'TITLE': 'StreetSport API',
+    'DESCRIPTION': 'Learning streetsport system',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

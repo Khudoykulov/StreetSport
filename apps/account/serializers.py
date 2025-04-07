@@ -82,7 +82,7 @@ class SuperUserCreateSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'name', 'phone',]
+        fields = ['id', 'name', 'phone', ]
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -150,3 +150,15 @@ class ManagerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'name', 'phone', 'role', 'created_date']
+
+
+class UserRoleUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['role']
+
+    def validate_role(self, value):
+        valid_roles = [choice[1] for choice in User.ROLE_CHOICES]
+        if value not in valid_roles:
+            raise serializers.ValidationError("Noto‘g‘ri role kiritildi.")
+        return value

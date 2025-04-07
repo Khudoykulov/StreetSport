@@ -1,6 +1,6 @@
 from django.db import models
 from apps.account.models import User
-
+from django.core.exceptions import PermissionDenied
 
 class Stadium(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nomi")
@@ -12,6 +12,14 @@ class Stadium(models.Model):
     views = models.PositiveIntegerField(default=0, verbose_name="Ko‘rishlar")
     created_date = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan sana")
     modified_date = models.DateTimeField(auto_now=True, verbose_name="Yangilangan sana")
+
+    def save(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+
+        if user is not None:
+            if user.role not in ['admin', 'owner']:
+                raise PermissionDenied("Sizga ushbu amalni bajarishga ruxsat yo‘q.")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

@@ -1,11 +1,12 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, permissions, viewsets
-from .permissions import IsAdminUser, IsAdminOrOwner, IsOwnerOrReadOnly
+from rest_framework.generics import UpdateAPIView
+from .permissions import IsAdminUser, IsAdminOrOwner, IsReadOnly, IsAdminOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import SuperUserCreateSerializer, OwnerListSerializer, ManagerListSerializer, ManagerCreateSerializer
+from .serializers import SuperUserCreateSerializer, OwnerListSerializer, ManagerListSerializer, ManagerCreateSerializer,UserRoleUpdateSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -54,16 +55,15 @@ class LoginAPIView(TokenObtainPairView):
 class UserProfileRUDView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserProfileSerializer
     queryset = User.objects.filter(is_active=True)
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         data = {
             'success': True,
-            'detail': 'Your account has been deactivated.',
+            'detail': 'Your account has been permanently deleted.',
         }
         return Response(data, status=status.HTTP_200_OK)
 
@@ -79,37 +79,6 @@ class SuperUserCreateView(APIView):
             user.role = 'admin'  # Assign 'admin' role to superuser
             user.save()
             return Response({"detail": "Superuser created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserProfileAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-    serializer_class = UserSerializer
-
-    def get(self, request, *args, **kwargs):
-        user = request.user
-        serializer = self.serializer_class(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        request=UserUpdateSerializer,
-        responses=UserSerializer
-    )
-    def put(self, request, *args, **kwargs):
-        user = request.user
-        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def patch(self, request, *args, **kwargs):
-        user = request.user
-        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -139,3 +108,20 @@ class ManagerViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(role='manager')  # Automatik manager rolini beradi
+
+
+class UserRoleUpdateView(UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserRoleUpdateSerializer
+    permission_classes = [permissions.IsAdminUser]  # Admin tomonidan faqat o'zgartirilishi kerak
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        role = request.data.get('role')
+
+        # Faqat valid ro'lni qo'llash
+        if role and role in dict(User.ROLE_CHOICES):
+            instance.role = role
+            instance.save()
+            return Response({'success': True, 'detail': f"User role updated to {role}."}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid role provided.'}, status=status.HTTP_400_BAD_REQUEST)

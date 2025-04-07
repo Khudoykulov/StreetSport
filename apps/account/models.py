@@ -46,12 +46,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     modified_date = models.DateTimeField(auto_now=True)
     created_date = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        # Rolga mos ravishda is_owner va is_manager ni yangilash
-        self.is_owner = (self.role == 'owner')
-        self.is_manager = (self.role == 'manager')
-        super().save(*args, **kwargs)
-
     objects = UserManager()
     USERNAME_FIELD = 'phone'
     REQUIRED_FIELDS = ['name']
