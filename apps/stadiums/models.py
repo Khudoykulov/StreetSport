@@ -1,6 +1,8 @@
 from django.db import models
 from apps.account.models import User
 from django.core.exceptions import PermissionDenied
+from django.db.models.signals import post_save
+
 
 class Stadium(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nomi")
@@ -26,7 +28,6 @@ class Stadium(models.Model):
 
     @property
     def average_rating(self):
-        from apps.bookings.models import Rating  # Booking ilovasidan Rating modelini import qilamiz
         ratings = Rating.objects.filter(stadium=self)
         return sum(rating.rank for rating in ratings) / ratings.count() if ratings else 0
 
@@ -48,3 +49,62 @@ class StadiumImage(models.Model):
 
     def __str__(self):
         return f"{self.stadium.name} rasmi"
+
+
+class Rating(models.Model):
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='ratings', verbose_name="Stadion")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
+    rank = models.PositiveSmallIntegerField(default=0, choices=[(i, i) for i in range(1, 11)], verbose_name="Baho")
+
+    def __str__(self):
+        return f"{self.stadium.name} - {self.rank}"
+
+
+class Like(models.Model):
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='likes', verbose_name="Stadion")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
+
+    def __str__(self):
+        return f"{self.user} liked {self.stadium.name}"
+
+
+class Wishlist(models.Model):
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='wishlists', verbose_name="Stadion")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
+
+    def __str__(self):
+        return f"{self.user} wishlisted {self.stadium.name}"
+
+
+class Comment(models.Model):
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='children', on_delete=models.SET_NULL)
+    product = models.ForeignKey(Stadium, on_delete=models.SET_NULL, null=True, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    comment = models.TextField()
+    top_level_comment_id = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    created_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.product.name} (pid: {self.product.id} -> cid: {self.id})'
+
+    @property
+    def tree(self):
+        return Comment.objects.filter(top_level_comment_id=self.id)
+
+
+class CommentImage(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='comment/')
+
+
+def comment_post_save(sender, instance, created, **kwargs):
+    if created:
+        if instance.parent:
+            # reply
+            instance.top_level_comment_id = instance.parent.top_level_comment_id
+        else:
+            instance.top_level_comment_id = instance.id
+        instance.save()
+
+
+post_save.connect(comment_post_save, sender=Comment)

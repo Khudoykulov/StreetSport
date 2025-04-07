@@ -27,8 +27,15 @@ class IsAdminOrOwner(BasePermission):
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_superuser
+
     def has_object_permission(self, request, view, obj):
-        return obj == request.user or request.user.is_superuser
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_superuser
 
 
 class IsReadOnly(permissions.BasePermission):
@@ -75,3 +82,11 @@ class CustomBookingPermission(BasePermission):
             return request.user.groups.filter(name='Manager').exists()
 
         return False
+
+
+class IsAuthor(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user == obj.user

@@ -79,27 +79,3 @@ class Booking(models.Model):
         self.full_clean()  # Run validation before saving
         super().save(*args, **kwargs)
 
-
-class Rating(models.Model):
-    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='ratings', verbose_name="Stadion")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
-    rank = models.PositiveSmallIntegerField(default=0, choices=[(i, i) for i in range(1, 11)], verbose_name="Baho")
-
-    def __str__(self):
-        return f"{self.stadium.name} - {self.rank}"
-
-
-class Like(models.Model):
-    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='likes', verbose_name="Stadion")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
-
-    def __str__(self):
-        return f"{self.user} liked {self.stadium.name}"
-
-
-class Wishlist(models.Model):
-    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name='wishlists', verbose_name="Stadion")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
-
-    def __str__(self):
-        return f"{self.user} wishlisted {self.stadium.name}"

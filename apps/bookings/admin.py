@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Booking, Rating, Like, Wishlist
+from .models import Booking
 
 # Bron qilish admin
 @admin.register(Booking)
@@ -82,25 +82,3 @@ class BookingAdmin(admin.ModelAdmin):
             if not obj.user:
                 obj.user = request.user  # Joriy adminni foydalanuvchi sifatida qo‘shish
         super().save_model(request, obj, form, change)
-
-# Reyting admin
-@admin.register(Rating)
-class RatingAdmin(admin.ModelAdmin):
-    list_display = ('stadium', 'user', 'rank',)
-    list_filter = ('rank', 'stadium')
-    search_fields = ('stadium__name', 'user__username')
-    ordering = ('-rank',)
-
-# Yoqtirish admin
-@admin.register(Like)
-class LikeAdmin(admin.ModelAdmin):
-    list_display = ('stadium', 'user',)
-    list_filter = ('stadium',)
-    search_fields = ('stadium__name', 'user__username')
-
-# Istaklar ro‘yxati admin
-@admin.register(Wishlist)
-class WishlistAdmin(admin.ModelAdmin):
-    list_display = ('stadium', 'user',)
-    list_filter = ('stadium',)
-    search_fields = ('stadium__name', 'user__username')
