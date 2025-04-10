@@ -61,7 +61,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'name', 'phone', 'is_active', 'is_superuser', 'is_staff', 'role', 'modified_date', 'created_date')
+            'id', 'name', 'phone', 'modified_date', 'created_date')
 
 
 class SuperUserCreateSerializer(serializers.ModelSerializer):
@@ -110,7 +110,6 @@ class OwnerCreateSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password1')
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
-        user.role = 'owner'
         user.is_active = True
         user.save()
         return user
@@ -145,7 +144,6 @@ class ManagerCreateSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-
 class ManagerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -158,32 +156,56 @@ class UserRoleUpdateSerializer(serializers.ModelSerializer):
         fields = ['role']
 
     def validate_role(self, value):
-        valid_roles = [choice[1] for choice in User.ROLE_CHOICES]
-        if value not in valid_roles:
-            raise serializers.ValidationError("Noto‘g‘ri role kiritildi.")
+        # Faqat 'owner' roliga ruxsat berish
+        if value != 'owner':
+            raise serializers.ValidationError("Rol faqat 'owner' ga o‘zgartirilishi mumkin.")
         return value
 
 
 class ResetPasswordSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=False)  # Admin uchun ixtiyoriy
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, validators=[validate_password])
 
     def validate(self, attrs):
         password = attrs.get('password')
         password2 = attrs.get('password2')
-        if self.context['request'].user.check_password(password):
-            raise ValidationError('Current must not equal to new password')
-        if password == password2:
-            return attrs
-        raise ValidationError('Passwords do not match')
+        request = self.context['request']
+        user = request.user
 
-    def create(self, validated_data):
+        # Agar user_id berilgan bo‘lsa, uni olish
+        user_id = attrs.get('user_id')
+        if user_id:
+            if not user.role == 'admin':
+                raise ValidationError("Faqat admin boshqa foydalanuvchilarning parolini o‘zgartira oladi.")
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                raise ValidationError("Bunday ID ga ega foydalanuvchi topilmadi.")
+
+        # Joriy parol yangi parolga teng bo‘lmasligini tekshirish
+        if user.check_password(password):
+            raise ValidationError("Joriy parol yangi parolga teng bo‘lmasligi kerak.")
+
+        # Parollar mosligini tekshirish
+        if password != password2:
+            raise ValidationError("Parollar mos emas.")
+
+        return attrs
+
+    def save(self):
+        validated_data = self.validated_data
         password = validated_data.get('password')
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
+
+        # Agar user_id berilgan bo‘lsa, admin o‘sha foydalanuvchini yangilaydi
+        if 'user_id' in validated_data and validated_data['user_id']:
+            user = User.objects.get(id=validated_data['user_id'])
+
         user.set_password(password)
         user.save()
         return user
-
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -208,3 +230,14 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
         return user
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+
+    def get_created_by_name(self, obj):
+        return obj.created_by.name if obj.created_by else "None"
+
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'phone', 'role', 'is_active', 'created_date', 'created_by_name']

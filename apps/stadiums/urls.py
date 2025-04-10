@@ -1,7 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .models import Rating
 from .views import StadiumViewSet, RatingViewSet, LikeViewSet, WishlistViewSet, CommentViewSet
 
 router = DefaultRouter()

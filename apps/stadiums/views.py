@@ -1,7 +1,10 @@
 from rest_framework import viewsets
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from apps.account.permissions import IsAdminOrOwner, IsAuthor, IsAdminOrReadOnly
+from apps.account.permissions import IsAdminOrOwner, IsAuthor, IsAdminOrReadOnly, IsAdminOrOwnerStadium, IsAdminUser
 from .mixins import CreateViewSetMixin
 from .models import Stadium, Rating, Like, Wishlist, CommentImage, Comment
 from .serializers import (
@@ -22,13 +25,151 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 class StadiumViewSet(viewsets.ModelViewSet):
     queryset = Stadium.objects.all().order_by('-created_date')
-    permission_classes = [IsAdminOrOwner]
+    permission_classes = [IsAdminOrOwnerStadium]
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Stadium.objects.all().order_by('-created_date')
+
+        if not user.is_authenticated:
+            return Stadium.objects.none()
+
+        if user.role == 'admin':
+            return qs
+        elif user.role == 'owner':
+            return qs.filter(owner=user)
+        elif user.role == 'manager':
+            return qs.filter(manager=user)
+        return Stadium.objects.none()
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
             return StadiumGetSerializer
         return StadiumPostSerializer
+
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'price': {'type': 'number'},
+                    'description': {'type': 'string'},
+                    'owner': {'type': 'integer'},
+                    'manager': {'type': 'integer'},
+                    'address': {'type': 'string'},
+                    'latitude': {'type': 'string'},
+                    'longitude': {'type': 'string'},
+                    'images': {
+                        'type': 'array',
+                        'items': {'type': 'string', 'format': 'binary'},  # Fayl yuklash uchun
+                    },
+                },
+                'required': ['name', 'price', 'owner'],  # Faqat modelda majburiy maydonlar
+            }
+        },
+        responses={201: StadiumGetSerializer},  # StadiumGetSerializer ishlatiladi
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'price': {'type': 'number'},
+                    'description': {'type': 'string'},
+                    'owner': {'type': 'integer'},
+                    'manager': {'type': 'integer'},
+                    'address': {'type': 'string'},
+                    'latitude': {'type': 'string'},
+                    'longitude': {'type': 'string'},
+                    'images': {
+                        'type': 'array',
+                        'items': {'type': 'string', 'format': 'binary'},  # Fayl yuklash uchun
+                    },
+                },
+                'required': ['name', 'price', 'owner'],  # Faqat modelda majburiy maydonlar
+            }
+        },
+        responses={200: StadiumGetSerializer},  # StadiumGetSerializer ishlatiladi
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Stadionlar bo‘yicha statistika",
+        description="Umumiy stadionlar soni, har bir stadionning owneri va menejeri haqida ma’lumot qaytaradi.",
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'total_stadiums': {'type': 'integer'},
+                    'stadiums': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'id': {'type': 'integer'},
+                                'name': {'type': 'string'},
+                                'owner': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'id': {'type': 'integer'},
+                                        'username': {'type': 'string'},
+                                        'role': {'type': 'string'},
+                                    },
+                                },
+                                'manager': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'id': {'type': 'integer'},
+                                        'username': {'type': 'string'},
+                                        'role': {'type': 'string'},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+        }
+    )
+    @action(detail=False, methods=['get'], url_path='statistics', permission_classes=[IsAuthenticated,IsAdminUser])
+    def statistics(self, request):
+        # Umumiy stadionlar sonini hisoblash
+        total_stadiums = Stadium.objects.count()
+
+        # Har bir stadionning owneri va menejeri haqida ma’lumot
+        stadiums = Stadium.objects.all()
+        stadium_data = []
+        for stadium in stadiums:
+            owner_data = {
+                'id': stadium.owner.id,
+                'username': stadium.owner.name,
+                'role': stadium.owner.role,
+            } if stadium.owner else None
+
+            manager_data = {
+                'id': stadium.manager.id,
+                'username': stadium.manager.name,
+                'role': stadium.manager.role,
+            } if stadium.manager else None
+
+            stadium_data.append({
+                'id': stadium.id,
+                'name': stadium.name,
+                'owner': owner_data,
+                'manager': manager_data,
+            })
+
+        return Response({
+            'total_stadiums': total_stadiums,
+            'stadiums': stadium_data,
+        })
 
 
 class WishlistViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
