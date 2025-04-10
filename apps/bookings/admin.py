@@ -6,6 +6,7 @@ from .models import Booking
 class BookingAdmin(admin.ModelAdmin):
     # Ro'yxatda ko'rinadigan ustunlar
     list_display = (
+        'id',
         'stadium',
         'user',
         'booking_date',

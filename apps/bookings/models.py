@@ -24,7 +24,7 @@ class Booking(models.Model):
         default=timezone.now
     )
     start_hour = models.PositiveSmallIntegerField(
-        choices=[(i, f"{i:02d}:00") for i in range(8, 22)],  # Operating hours 08:00-21:00
+        choices=[(i, f"{i:02d}:00") for i in range(4, 25)],  # Operating hours 08:00-21:00
         default=12,  # Default 12:00
         verbose_name="Boshlanish soati"
     )
