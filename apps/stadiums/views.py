@@ -207,18 +207,52 @@ class LikeViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
 class RatingViewSet(viewsets.ModelViewSet):
     queryset = Rating.objects.all()
     serializer_class = RankSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, DjangoFilterBackend]
-    search_fields = ['stadium__name']
+    search_fields = ['stadium__name']  # Stadion nomi bo‘yicha qidiruv
+    filterset_fields = ['stadium', 'user', 'rank']  # Filtrlash uchun maydonlar
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
+        # Admin yoki superuser bo‘lsa, barcha baholarni qaytarish
+        if self.request.user.is_superuser or self.request.user.role == 'admin':
             return Rating.objects.all()
-        return Rating.objects.none()
+        # Oddiy foydalanuvchilar faqat o‘z baholarini ko‘radi
+        return Rating.objects.filter(user=self.request.user)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        ctx['sid'] = self.kwargs.get('sid')
+        ctx['sid'] = self.kwargs.get('sid')  # URL dan sid ni olish
         return ctx
+
+    @extend_schema(
+        summary="Stadionga baho qo‘yish",
+        description="Foydalanuvchi ma’lum bir stadionga baho qo‘yadi. Bir foydalanuvchi bir stadionga faqat bir marta baho qo‘yishi mumkin.",
+        responses={201: RankSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Baho o‘zgartirish",
+        description="Foydalanuvchi o‘z bahosini o‘zgartiradi.",
+        responses={200: RankSerializer},
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.user != request.user:
+            return Response({"detail": "Siz faqat o‘zingizning bahoingizni o‘zgartira olasiz."}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Baho o‘chirish",
+        description="Foydalanuvchi o‘z bahosini o‘chiradi.",
+        responses={204: None},
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.user != request.user:
+            return Response({"detail": "Siz faqat o‘zingizning bahoingizni o‘chira olasiz."}, status=403)
+        return super().destroy(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

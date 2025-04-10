@@ -183,6 +183,17 @@ class LikePostSerializer(serializers.ModelSerializer):
         model = Like
         fields = ['id', 'stadium']
 
+    def validate(self, attrs):
+        request = self.context['request']
+        user = request.user
+        stadium = attrs.get('stadium')
+
+        # Foydalanuvchi allaqachon ushbu stadionga like qo‘ygan bo‘lsa, xato qaytaramiz
+        if Like.objects.filter(user=user, stadium=stadium).exists():
+            raise serializers.ValidationError({"stadium": "Siz allaqachon ushbu stadionga like qo‘ygansiz."})
+
+        return attrs
+
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user_id'] = user.id
@@ -194,13 +205,38 @@ class RankSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Rating
-        fields = ['id', 'stadium', 'rank']
+        fields = ['id', 'stadium', 'rank', 'user']
+        read_only_fields = ['user', 'stadium']  # user va stadium faqat o‘qish uchun
+
+    def validate(self, attrs):
+        request = self.context['request']
+        user = request.user
+        sid = self.context.get('sid')
+
+        # sid ni tekshirish va Stadium ob‘ektini olish
+        if not sid:
+            raise serializers.ValidationError({"stadium": "Stadion ID si kiritilishi kerak."})
+        try:
+            stadium = Stadium.objects.get(id=sid)
+        except Stadium.DoesNotExist:
+            raise serializers.ValidationError({"stadium": "Bunday stadion topilmadi."})
+
+        # Foydalanuvchi allaqachon ushbu stadionga baho qo‘ygan bo‘lsa, xato qaytaramiz
+        if Rating.objects.filter(user=user, stadium=stadium).exists():
+            raise serializers.ValidationError({"stadium": "Siz allaqachon ushbu stadionga baho qo‘ygansiz."})
+
+        # Rank 1 dan 10 gacha bo‘lishini qo‘shimcha tekshirish
+        rank = attrs.get('rank')
+        if rank < 1 or rank > 10:
+            raise serializers.ValidationError({"rank": "Baho 1 dan 10 gacha bo‘lishi kerak."})
+
+        # Stadium ni validated_data ga qo‘shish
+        attrs['stadium'] = stadium
+        return attrs
 
     def create(self, validated_data):
         user = self.context['request'].user
-        sid = self.context['sid']
-        validated_data['user_id'] = user.id
-        validated_data['stadium_id'] = sid
+        validated_data['user'] = user  # user ob‘ektini o‘rnatamiz
         return super().create(validated_data)
 
 
